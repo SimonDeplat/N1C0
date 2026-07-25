@@ -2,14 +2,15 @@
 (
 init: { |self, main|
 	self[\main] = main;
-	self[\mixerBus] = Bus.audio(s, 2);
+
 	self.createSynths;
 	self.createMixer;
 
 	if(main[\dispatch]) {
 		self[\dispatcher] = ~gmDefs.getSynth("S Dispatch");
-		self[\dispatcher].setParam(\dispatchOut, 2);
-		self[\mixer].setOut(self[\dispatcher][\busses][\in]);
+		self[\dispatcher].plugInto(self[\main][\master]);
+		self[\dispatcher].plugOut(2, \dispatchOut);
+		self[\mixer].plugInto(self[\dispatcher]);
 	};
 
 	self[\menu] = ~gmWidgets.getMenu
@@ -86,7 +87,6 @@ createSynths: { |self|
 	self[\synthsView] = ~gmWidgets.getLayout;
 
 	self[\kick808] = ~gmDefs.getSynth("Kick808")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\kick808View] = ~gmWidgets.getSynthView
 	.setSynth(self[\kick808])
@@ -95,7 +95,6 @@ createSynths: { |self|
 	self[\synthsView].addItem(self[\kick808View]);
 
 	self[\kick] = ~gmDefs.getSynth("Kick")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\kickView] = ~gmWidgets.getSynthView
 	.setSynth(self[\kick])
@@ -104,7 +103,6 @@ createSynths: { |self|
 	self[\synthsView].addItem(self[\kickView]);
 
 	self[\snare] = ~gmDefs.getSynth("Snare")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\snareView] = ~gmWidgets.getSynthView
 	.setSynth(self[\snare])
@@ -113,7 +111,6 @@ createSynths: { |self|
 	self[\synthsView].addItem(self[\snareView]);
 
 	self[\hihat] = ~gmDefs.getSynth("WhiteEnv")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\hihatView] = ~gmWidgets.getSynthView
 	.setSynth(self[\hihat])
@@ -122,13 +119,20 @@ createSynths: { |self|
 	self[\synthsView].addItem(self[\hihatView]);
 
 	self[\hihat2] = ~gmDefs.getSynth("WhiteEnv")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\hihat2View] = ~gmWidgets.getSynthView
 	.setSynth(self[\hihat2])
 	.setSpacing(self[\main][\synthSpacing])
 	.hideParam(\out);
 	self[\synthsView].addItem(self[\hihat2View]);
+
+	self[\synths] = [
+		self[\kick808],
+		self[\kick],
+		self[\snare],
+		self[\hihat],
+		self[\hihat2],
+	];
 },
 
 createMixer: { |self|
@@ -141,12 +145,12 @@ createMixer: { |self|
 		"Amplifier"
 	])
 	.bindPlayer(self[\main][\player])
-	.setOut(self[\main][\masterBus]);
+	.plugInto(self[\main][\master]);
 
-	// Bus assignment
-	self[\mixer][\source].setParam(
-		\in, self[\mixerBus]
-	);
+	// Plug synths
+	self[\synths].do({ |synth|
+		synth.plugInto(self[\mixer]);
+	});
 
 	// View
 	self[\mixerView] = ~gmWidgets.getChainView

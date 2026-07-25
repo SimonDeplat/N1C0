@@ -3,14 +3,14 @@
 init: { |self, main|
 	self[\main] = main;
 	self[\samplers] = List(0);
-	self[\mixerBus] = Bus.audio(s, 2);
 
 	self.createMixer;
 
 	if(main[\dispatch]) {
 		self[\dispatcher] = ~gmDefs.getSynth("S Dispatch");
-		self[\dispatcher].setParam(\dispatchOut, 10);
-		self[\mixer].setOut(self[\dispatcher][\busses][\in]);
+		self[\dispatcher].plugInto(self[\main][\master]);
+		self[\dispatcher].plugOut(10, \dispatchOut);
+		self[\mixer].plugInto(self[\dispatcher]);
 	};
 
 	self[\synthsView] = ~gmWidgets.getLayout;
@@ -115,12 +115,7 @@ createMixer: { |self|
 		"Amplifier"
 	])
 	.bindPlayer(self[\main][\player])
-	.setOut(self[\main][\masterBus]);
-
-	// Bus assignment
-	self[\mixer][\source].setParam(
-		\in, self[\mixerBus]
-	);
+	.plugInto(self[\main][\master]);
 
 	// View
 	self[\mixerView] = ~gmWidgets.getChainView
@@ -232,7 +227,7 @@ addSampler: { |self|
 	fileLoader[\view].maxWidth_(64);
 	synth = ~gmDefs.getSynth("Tunenv S Sampler")
 	.bindPlayer(self[\main][\player])
-	.setParam(\out, self[\mixerBus]);
+	.plugInto(self[\mixer]);
 	synthView = ~gmWidgets.getSynthView
 	.setSynth(synth)
 	.setSpacing(self[\main][\synthSpacing])

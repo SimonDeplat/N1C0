@@ -2,10 +2,10 @@
 (
 init: { |self|
 	// SETTINGS
-	self[\bpm] = 100;
-	self[\rhythm] = [4, 2, 3, 2];
-	self[\scale] = \chromatic;
-	self[\dispatch] = true;
+	self[\bpm] = 80;
+	self[\rhythm] = [4, 4, 4, 4];
+	self[\scale] = \minor;
+	self[\dispatch] = false;
 
 	self[\synthSpacing] = 8;
 
@@ -13,9 +13,8 @@ init: { |self|
 	self[\folder] = thisProcess.nowExecutingPath.dirname;
 	self.loadDependencies;
 
-	// Create bus first
-	self[\masterBus] = Bus.audio(s, 2);
 	self.initPlayer;
+	self.initMaster;
 
 	// Load sections
 	self[\sectionsNames] = ["Master"].asList;
@@ -24,12 +23,9 @@ init: { |self|
 	self.loadScript("Basse", "/n1c0_bass.scd");
 	self.loadScript("Claviers", "/n1c0_keyboards.scd");
 	self.loadScript("Drones", "/n1c0_drones.scd");
-	// self.loadScript("Noizdrones", "/n1c0_noiseDrones.scd");
+	self.loadScript("Noizdrones", "/n1c0_noiseDrones.scd");
 	self.loadScript("Samplers", "/n1c0_sampler.scd");
 	self.loadScript("Ext", "/n1c0_externalSource.scd");
-
-	// Create master after synths
-	self.initMaster;
 
 	// Create view
 	self.initView;
@@ -57,13 +53,10 @@ initMaster: { |self|
 	])
 	.bindPlayer(self[\player]);
 
-	self[\master][\source].setParam(
-		\in, self[\masterBus]
-	);
-
 	self[\master]
 	.getSynth("Limiter")
-	.setParam(\amp, 0.95);
+	.setParam(\amp, 0.95)
+	.plugOut(0, \out);
 
 	self[\masterView] = ~gmWidgets.getChainView
 	.setChain(self[\master])

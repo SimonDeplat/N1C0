@@ -2,14 +2,15 @@
 (
 init: { |self, main|
 	self[\main] = main;
-	self[\mixerBus] = Bus.audio(s, 2);
+
 	self.createSynths;
 	self.createMixer;
 
 	if(main[\dispatch]) {
 		self[\dispatcher] = ~gmDefs.getSynth("S Dispatch");
-		self[\dispatcher].setParam(\dispatchOut, 6);
-		self[\mixer].setOut(self[\dispatcher][\busses][\in]);
+		self[\dispatcher].plugInto(self[\main][\master]);
+		self[\dispatcher].plugOut(6, \dispatchOut);
+		self[\mixer].plugInto(self[\dispatcher]);
 	};
 
 	self[\menu] = ~gmWidgets.getMenu
@@ -86,7 +87,6 @@ createSynths: { |self|
 	self[\synthsView] = ~gmWidgets.getLayout;
 
 	self[\rhodes] = ~gmDefs.getSynth("Rhodes")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\rhodesView] = ~gmWidgets.getSynthView
 	.setSynth(self[\rhodes])
@@ -95,7 +95,6 @@ createSynths: { |self|
 	self[\synthsView].addItem(self[\rhodesView]);
 
 	self[\pulsar] = ~gmDefs.getSynth("Pulsar")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\pulsarView] = ~gmWidgets.getSynthView
 	.setSynth(self[\pulsar])
@@ -104,7 +103,6 @@ createSynths: { |self|
 	self[\synthsView].addItem(self[\pulsarView]);
 
 	self[\organ] = ~gmDefs.getSynth("OrganTW")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\organView] = ~gmWidgets.getSynthView
 	.setSynth(self[\organ])
@@ -113,13 +111,19 @@ createSynths: { |self|
 	self[\synthsView].addItem(self[\organView]);
 
 	self[\kalimba] = ~gmDefs.getSynth("Kalimba")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\kalimbaView] = ~gmWidgets.getSynthView
 	.setSynth(self[\kalimba])
 	.setSpacing(self[\main][\synthSpacing])
 	.hideParam(\out);
 	self[\synthsView].addItem(self[\kalimbaView]);
+
+	self[\synths] = [
+		self[\rhodes],
+		self[\pulsar],
+		self[\organ],
+		self[\kalimba],
+	];
 },
 
 createMixer: { |self|
@@ -134,12 +138,12 @@ createMixer: { |self|
 		"Amplifier"
 	])
 	.bindPlayer(self[\main][\player])
-	.setOut(self[\main][\masterBus]);
+	.plugInto(self[\main][\master]);
 
-	// Bus assignment
-	self[\mixer][\source].setParam(
-		\in, self[\mixerBus]
-	);
+	// Plug synths
+	self[\synths].do({ |synth|
+		synth.plugInto(self[\mixer]);
+	});
 
 	// View
 	self[\mixerView] = ~gmWidgets.getChainView

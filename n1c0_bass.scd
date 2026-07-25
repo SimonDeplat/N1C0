@@ -2,14 +2,15 @@
 (
 init: { |self, main|
 	self[\main] = main;
-	self[\mixerBus] = Bus.audio(s, 2);
+
 	self.createSynths;
 	self.createMixer;
 
 	if(main[\dispatch]) {
 		self[\dispatcher] = ~gmDefs.getSynth("S Dispatch");
-		self[\dispatcher].setParam(\dispatchOut, 4);
-		self[\mixer].setOut(self[\dispatcher][\busses][\in]);
+		self[\dispatcher].plugInto(self[\main][\master]);
+		self[\dispatcher].plugOut(4, \dispatchOut);
+		self[\mixer].plugInto(self[\dispatcher]);
 	};
 
 	self[\menu] = ~gmWidgets.getMenu
@@ -86,7 +87,6 @@ createSynths: { |self|
 	self[\synthsView] = ~gmWidgets.getLayout;
 
 	self[\bougie] = ~gmDefs.getSynth("Bougie")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\bougieView] = ~gmWidgets.getSynthView
 	.setSynth(self[\bougie])
@@ -95,13 +95,17 @@ createSynths: { |self|
 	self[\synthsView].addItem(self[\bougieView]);
 
 	self[\sine] = ~gmDefs.getSynth("Sine")
-	.setParam(\out, self[\mixerBus])
 	.bindPlayer(self[\main][\player]);
 	self[\sineView] = ~gmWidgets.getSynthView
 	.setSynth(self[\sine])
 	.setSpacing(self[\main][\synthSpacing])
 	.hideParam(\out);
 	self[\synthsView].addItem(self[\sineView]);
+
+	self[\synths] = [
+		self[\bougie],
+		self[\sine],
+	];
 },
 
 createMixer: { |self|
@@ -115,12 +119,12 @@ createMixer: { |self|
 		"Amplifier"
 	])
 	.bindPlayer(self[\main][\player])
-	.setOut(self[\main][\masterBus]);
+	.plugInto(self[\main][\master]);
 
-	// Bus assignment
-	self[\mixer][\source].setParam(
-		\in, self[\mixerBus]
-	);
+	// Plug synths
+	self[\synths].do({ |synth|
+		synth.plugInto(self[\mixer]);
+	});
 
 	// View
 	self[\mixerView] = ~gmWidgets.getChainView
